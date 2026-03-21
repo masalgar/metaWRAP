@@ -1,46 +1,66 @@
 #!/usr/bin/env python2.7
 from __future__ import print_function
 import sys
-# This script summarizes the statistics of each bin by parsing 
-# the checkm_folder/storage/bin_stats_ext.tsv file of the CheckM output
+import csv
 
+"""
+Usage:
+  python2.7 quality_to_stats.py quality_report.tsv > sample.stats.txt
 
-if len(sys.argv)==3: 
-	binner=sys.argv[2]
-	print("bin\tcompleteness\tcontamination\tGC\tlineage\tN50\tsize\tbinner")
-elif len(sys.argv)==4:
-	source={}
-	for line in open(sys.argv[3]):
-		cut=line.strip().split("\t")
-		source[cut[0]]=cut[7]
-	print("bin\tcompleteness\tcontamination\tGC\tlineage\tN50\tsize\tbinner")
-else:
-	print("bin\tcompleteness\tcontamination\tGC\tlineage\tN50\tsize")
+Input (TSV) must contain at least these headers:
+  Name, Completeness, Contamination, GC_Content, Contig_N50, Genome_Size
 
+Output columns (tab-separated):
+  bin  completeness  contamination  GC  lineage  N50  size
 
-for line in open(sys.argv[1]):
-	dic=eval(line.strip().split("\t")[1])
+Notes:
+  - Checkm2 does not provide lineage. The lineage column is always set to "NA" to keep structure of original CheckM.
+  - To mimic the original scrip's appearance, numeric fields
+    for completeness/contamination/GC are truncated to 5 chars.
+  - N50 and size are printed as-is (no truncation), like the original.
+"""
 
-	#if dic["Completeness"]<20 or dic["Contamination"]>10: continue
-	if "__" in dic["marker lineage"]: dic["marker lineage"]=dic["marker lineage"].split("__")[1]
-	#if "unbinned" in line.split("\t")[0]: name="Unbinned"
-	name=line.split("\t")[0]
+def fmt5(x):
+    """Mimic old script's simple 5-char truncation for floats."""
+    if x is None:
+        return ""
+    s = str(x)
+    return s[:5]  # crude truncation (e.g., "96.176" -> "96.17")
 
+def main():
+    if len(sys.argv) != 2:
+        sys.stderr.write("Usage: {} quality_report.tsv\n".format(sys.argv[0]))
+        sys.exit(1)
 
-	if len(sys.argv)==3:	
-		print("\t".join([name, str(dic["Completeness"])[:5],\
-		 str(dic["Contamination"])[:5], str(dic["GC"])[:5],\
-		 dic["marker lineage"], str(dic["N50 (contigs)"]),\
-		 str(dic["Genome size"]), binner]))
+    in_path = sys.argv[1]
 
-	elif len(sys.argv)==4:
-		print("\t".join([name, str(dic["Completeness"])[:5],\
-		 str(dic["Contamination"])[:5], str(dic["GC"])[:5],\
-		 dic["marker lineage"], str(dic["N50 (contigs)"]),\
-		 str(dic["Genome size"]), source[name]]))
+    # Print header exactly as expected by downstream tools
+    print("bin\tcompleteness\tcontamination\tGC\tlineage\tN50\tsize")
 
-	else:
-		print("\t".join([name, str(dic["Completeness"])[:5],\
-		 str(dic["Contamination"])[:5], str(dic["GC"])[:5],\
-		 dic["marker lineage"], str(dic["N50 (contigs)"]),\
-		 str(dic["Genome size"])]))
+    with open(in_path, "r") as f:
+        rdr = csv.DictReader(f, delimiter="\t")
+        for row in rdr:
+            # Pull required fields (use empty string if missing)
+            name = row.get("Name", "")
+            comp = row.get("Completeness", "")
+            cont = row.get("Contamination", "")
+            gc   = row.get("GC_Content", "")
+            n50  = row.get("Contig_N50", "")
+            size = row.get("Genome_Size", "")
+
+            # lineage is fixed to "NA"
+            lineage = "NA"
+
+            out = [
+                name,
+                fmt5(comp),
+                fmt5(cont),
+                fmt5(gc),
+                lineage,
+                str(n50),
+                str(size),
+            ]
+            print("\t".join(out))
+
+if __name__ == "__main__":
+    main()

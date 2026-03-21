@@ -44,22 +44,22 @@ announcement () { ${SOFT}/print_comment.py "$1" "#"; }
 # runs CheckM mini-pipeline on a single folder of bins
 run_checkm () {
 	if [[ -d ${1}.checkm ]]; then rm -r ${1}.checkm; fi
-        comm "Running CheckM on $1 bins"
-        checkm lineage_wf -x fa $1 ${1}.checkm -t $threads --pplacer_threads $p_threads
-        if [[ ! -s ${1}.checkm/storage/bin_stats_ext.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
-        comm "Finalizing CheckM stats and plots..."
-        ${SOFT}/summarize_checkm.py ${1}.checkm/storage/bin_stats_ext.tsv | (read -r; printf "%s\n" "$REPLY"; sort -rn -k2) > ${1}.stats
-	if [[ $? -ne 0 ]]; then error "Cannot make checkm summary file. Exiting."; fi
+        comm "Running CheckM2 on $1 bins"
+        conda run -n checkm2 checkm2 predict -x fa -i $1 -o ${1}.checkm -t $threads
+        if [[ ! -s ${1}.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
+        comm "Finalizing CheckM2 stats and plots..."
+        ${SOFT}/summarize_checkm.py ${1}.checkm/quality_report.tsv | (read -r; printf "%s\n" "$REPLY"; sort -rn -k2) > ${1}.stats
+	if [[ $? -ne 0 ]]; then error "Cannot make checkm2 summary file. Exiting."; fi
 }
 
 # makes checkm plot on a folder of bins if run_checkm has already been run
-plot_checkm () {
-	comm "Making CheckM plot of $1 bins"
-	checkm bin_qa_plot -x fa ${1}.checkm $1 ${1}.plot
-	if [[ ! -s ${1}.plot/bin_qa_plot.png ]]; then warning "Something went wrong with making the CheckM plot. Exiting."; fi
-	mv ${1}.plot/bin_qa_plot.png ${1}.png
-	rm -r ${1}.plot
-}
+# plot_checkm () {
+# 	comm "Making CheckM plot of $1 bins"
+# 	checkm bin_qa_plot -x fa ${1}.checkm $1 ${1}.plot
+# 	if [[ ! -s ${1}.plot/bin_qa_plot.png ]]; then warning "Something went wrong with making the CheckM plot. Exiting."; fi
+# 	mv ${1}.plot/bin_qa_plot.png ${1}.png
+# 	rm -r ${1}.plot
+# }
 
 
 ########################################################################################################
@@ -298,13 +298,13 @@ if [ "$run_checkm" == "true" ] && [[ ! -s work_files/binsM.stats ]]; then
 		if [[ ! -d ${bin_set}.tmp ]]; then mkdir ${bin_set}.tmp; fi
 		if [ "$quick" == "true" ]; then
 			comm "Note: running with --reduced_tree option"
-			checkm lineage_wf -x fa $bin_set ${bin_set}.checkm -t $threads --tmpdir ${bin_set}.tmp --pplacer_threads $p_threads --reduced_tree
+			conda run -n checkm2-env checkm2 predict -x fa -i $bin_set -o ${bin_set}.checkm -t $threads --tmpdir ${bin_set}.tmp --lowmem
 		else
-			checkm lineage_wf -x fa $bin_set ${bin_set}.checkm -t $threads --tmpdir ${bin_set}.tmp --pplacer_threads $p_threads
+			conda run -n checkm2-env checkm2 predict -x fa -i $bin_set -o ${bin_set}.checkm -t $threads --tmpdir ${bin_set}.tmp
 		fi
 		
-		if [[ ! -s ${bin_set}.checkm/storage/bin_stats_ext.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
-		${SOFT}/summarize_checkm.py ${bin_set}.checkm/storage/bin_stats_ext.tsv $bin_set | (read -r; printf "%s\n" "$REPLY"; sort) > ${bin_set}.stats
+		if [[ ! -s ${bin_set}.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
+		${SOFT}/summarize_checkm.py ${bin_set}.checkm/quality_report.tsv $bin_set | (read -r; printf "%s\n" "$REPLY"; sort) > ${bin_set}.stats
 		if [[ $? -ne 0 ]]; then error "Cannot make checkm summary file. Exiting."; fi
 		rm -r ${bin_set}.checkm; rm -r ${bin_set}.tmp
 
@@ -399,14 +399,14 @@ if [ "$run_checkm" == "true" ] && [ $dereplicate != "false" ]; then
 	mkdir binsO.tmp
 
 	if [ "$quick" == "true" ]; then
-		checkm lineage_wf -x fa binsO binsO.checkm -t $threads --tmpdir binsO.tmp --pplacer_threads $p_threads --reduced_tree
+		conda run -n checkm2-env checkm2 predict -x fa -i binsO -o binsO.checkm -t $threads --tmpdir binsO.tmp --lowmem
 	else
-		checkm lineage_wf -x fa binsO binsO.checkm -t $threads --tmpdir binsO.tmp --pplacer_threads $p_threads
+		conda run -n checkm2-env checkm2 predict -x fa -i binsO -o binsO.checkm -t $threads --tmpdir binsO.tmp
 	fi
 
-	if [[ ! -s binsO.checkm/storage/bin_stats_ext.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
+	if [[ ! -s binsO.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
 	rm -r binsO.tmp
-	${SOFT}/summarize_checkm.py binsO.checkm/storage/bin_stats_ext.tsv manual binsM.stats | (read -r; printf "%s\n" "$REPLY"; sort -rn -k2) > binsO.stats
+	${SOFT}/summarize_checkm.py binsO.checkm/quality_report.tsv manual binsM.stats | (read -r; printf "%s\n" "$REPLY"; sort -rn -k2) > binsO.stats
 	if [[ $? -ne 0 ]]; then error "Cannot make checkm summary file. Exiting."; fi
 	rm -r binsO.checkm
 	num=$(cat binsO.stats | awk -v c="$comp" -v x="$cont" '{if ($2>=c && $2<=100 && $3>=0 && $3<=x) print $1 }' | wc -l)

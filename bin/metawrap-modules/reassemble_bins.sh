@@ -335,10 +335,10 @@ if [ "$run_checkm" = true ]; then
 	comm "Running CheckM on best bins (reassembled and original)"
 	if [[ -d ${out}/reassembled_bins.checkm ]]; then rm -r ${out}/reassembled_bins.checkm; fi
 	mkdir ${out}/tmp
-	checkm lineage_wf -x fa ${out}/reassembled_bins ${out}/reassembled_bins.checkm -t $threads --tmpdir ${out}/tmp --pplacer_threads $p_threads
-	if [[ ! -s ${out}/reassembled_bins.checkm/storage/bin_stats_ext.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
-	${SOFT}/summarize_checkm.py ${out}/reassembled_bins.checkm/storage/bin_stats_ext.tsv | (read -r; printf "%s\n" "$REPLY"; sort) > ${out}/reassembled_bins.stats
-	if [[ $? -ne 0 ]]; then error "Cannot make checkm summary file. Exiting."; fi
+	conda run -n checkm2-env chechm2 predict -x fa -i ${out}/reassembled_bins -o ${out}/reassembled_bins.checkm -t $threads --tmpdir ${out}/tmp
+	if [[ ! -s ${out}/reassembled_bins.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM2. Exiting..."; fi
+	${SOFT}/summarize_checkm.py ${out}/reassembled_bins.checkm/quality_report.tsv | (read -r; printf "%s\n" "$REPLY"; sort) > ${out}/reassembled_bins.stats
+	if [[ $? -ne 0 ]]; then error "Cannot make checkm2 summary file. Exiting."; fi
 	rm -r ${out}/tmp
 
 
@@ -379,20 +379,20 @@ if [ "$run_checkm" = true ]; then
 	comm "Re-running CheckM on the best reasembled bins."
 	if [[ -d ${out}/reassembled_bins.checkm ]]; then rm -r ${out}/reassembled_bins.checkm; fi
 	mkdir ${out}/tmp
-        checkm lineage_wf -x fa ${out}/reassembled_bins ${out}/reassembled_bins.checkm -t $threads --tmpdir ${out}/tmp --pplacer_threads $p_threads
-        if [[ ! -s ${out}/reassembled_bins.checkm/storage/bin_stats_ext.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
+        conda run -n checkm2-env checkm2 predict -x fa -i ${out}/reassembled_bins -o ${out}/reassembled_bins.checkm -t $threads --tmpdir ${out}/tmp
+        if [[ ! -s ${out}/reassembled_bins.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
 	rm -r ${out}/tmp
         comm "Finalizing CheckM stats..."
-        ${SOFT}/summarize_checkm.py ${out}/reassembled_bins.checkm/storage/bin_stats_ext.tsv | (read -r; printf "%s\n" "$REPLY"; sort) > ${out}/reassembled_bins.stats
+        ${SOFT}/summarize_checkm.py ${out}/reassembled_bins.checkm/quality_report.tsv | (read -r; printf "%s\n" "$REPLY"; sort) > ${out}/reassembled_bins.stats
         if [[ $? -ne 0 ]]; then error "Cannot make checkm summary file. Exiting."; fi
 
-        comm "Making CheckM plot of ${out}/reassembled_bins bins"
-        checkm bin_qa_plot -x fa ${out}/reassembled_bins.checkm ${out}/reassembled_bins ${out}/reassembled_bins.plot
-        if [[ ! -s ${out}/reassembled_bins.plot/bin_qa_plot.png ]]; then warning "Something went wrong with making the CheckM plot. Exiting."; fi
-        mv ${out}/reassembled_bins.plot/bin_qa_plot.png ${out}/reassembled_bins.png
-        rm -r ${out}/reassembled_bins.plot
+        # comm "Making CheckM plot of ${out}/reassembled_bins bins"
+        # checkm bin_qa_plot -x fa ${out}/reassembled_bins.checkm ${out}/reassembled_bins ${out}/reassembled_bins.plot
+        # if [[ ! -s ${out}/reassembled_bins.plot/bin_qa_plot.png ]]; then warning "Something went wrong with making the CheckM plot. Exiting."; fi
+        # mv ${out}/reassembled_bins.plot/bin_qa_plot.png ${out}/reassembled_bins.png
+        # rm -r ${out}/reassembled_bins.plot
 	
-	comm "you will find the info on the final reassembled bins in ${out}/reassembled_bins.stats, and a figure summarizing it in ${out}/reassembled_bins.png"
+	comm "you will find the info on the final reassembled bins in ${out}/reassembled_bins.stats"
 
 	comm "making reassembly N50, compleiton, and contamination summary plots."
 	head -n 1 ${out}/work_files/reassembled_bins.stats > ${out}/original_bins.stats

@@ -85,7 +85,7 @@ if  [ ! -f "$ASSEMBLY" ]; then
 fi
 
 #  Checks for NCBI_nt database for BLAST
-if [ ! -f "${BLASTDB}/nt.000.nhd" ] && [ ! -f "${BLASTDB}/nt.000.nhd" ] ; then
+if [ ! -f "${BLASTDB}/nt.00.nhd" ] && [ ! -f "${BLASTDB}/nt.000.nhd" ] ; then
 	error "The file ${BLASTDB}/nt.000.nhd doesnt exist, which likely means that you havent set the correct path to your NCBI_nt database or\
 	 havent downloaded it. Please follow the metaWRAP database installation instructions."
 fi

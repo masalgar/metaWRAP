@@ -45,7 +45,7 @@ announcement () { ${SOFT}/print_comment.py "$1" "#"; }
 run_checkm () {
 	if [[ -d ${1}.checkm ]]; then rm -r ${1}.checkm; fi
         comm "Running CheckM2 on $1 bins"
-        conda run -n checkm2 checkm2 predict -x fa -i $1 -o ${1}.checkm -t $threads
+        conda run -n checkm2-env checkm2 predict -x fa -i $1 -o ${1}.checkm -t $threads
         if [[ ! -s ${1}.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
         comm "Finalizing CheckM2 stats and plots..."
         ${SOFT}/summarize_checkm.py ${1}.checkm/quality_report.tsv | (read -r; printf "%s\n" "$REPLY"; sort -rn -k2) > ${1}.stats

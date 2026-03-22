@@ -45,7 +45,7 @@ announcement () { ${SOFT}/print_comment.py "$1" "#"; }
 run_checkm () {
 	if [[ -d ${1}.checkm ]]; then rm -r ${1}.checkm; fi
         comm "Running CheckM2 on $1 bins"
-        conda run -n checkm2-env checkm2 predict -x fa -i $1 -o ${1}.checkm -t $threads
+        mamba run -n checkm2-env checkm2 predict -x fa -i $1 -o ${1}.checkm -t $threads --tmpdir ${1}.tmp
         if [[ ! -s ${1}.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
         comm "Finalizing CheckM2 stats and plots..."
         ${SOFT}/summarize_checkm.py ${1}.checkm/quality_report.tsv | (read -r; printf "%s\n" "$REPLY"; sort -rn -k2) > ${1}.stats
@@ -295,18 +295,19 @@ if [ "$run_checkm" == "true" ] && [[ ! -s work_files/binsM.stats ]]; then
 	for bin_set in $(ls | grep -v tmp | grep -v stats | grep bins); do 
 		comm "Running CheckM on $bin_set bins"
 		if [[ -d ${bin_set}.checkm ]]; then rm -r ${bin_set}.checkm; fi
-		if [[ ! -d ${bin_set}.tmp ]]; then mkdir ${bin_set}.tmp; fi
+		tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/checkm2_${bin_set}_XXXXXX")
 		if [ "$quick" == "true" ]; then
 			comm "Note: running with --reduced_tree option"
-			conda run -n checkm2-env checkm2 predict -x fa -i $bin_set -o ${bin_set}.checkm -t $threads --tmpdir ${bin_set}.tmp --lowmem
+			mamba run -n checkm2-env checkm2 predict -x fa -i $bin_set -o ${bin_set}.checkm -t $threads --tmpdir $tmp_dir --lowmem
 		else
-			conda run -n checkm2-env checkm2 predict -x fa -i $bin_set -o ${bin_set}.checkm -t $threads --tmpdir ${bin_set}.tmp
+			mamba run -n checkm2-env checkm2 predict -x fa -i $bin_set -o ${bin_set}.checkm -t $threads --tmpdir $tmp_dir
 		fi
 		
 		if [[ ! -s ${bin_set}.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
 		${SOFT}/summarize_checkm.py ${bin_set}.checkm/quality_report.tsv $bin_set | (read -r; printf "%s\n" "$REPLY"; sort) > ${bin_set}.stats
 		if [[ $? -ne 0 ]]; then error "Cannot make checkm summary file. Exiting."; fi
-		rm -r ${bin_set}.checkm; rm -r ${bin_set}.tmp
+		rm -r ${bin_set}.checkm
+		for _try in {1..5}; do rm -rf "$tmp_dir" && break; sleep 2; done || true
 
 		num=$(cat ${bin_set}.stats | awk -v c="$comp" -v x="$cont" '{if ($2>=c && $2<=100 && $3>=0 && $3<=x) print $1 }' | wc -l)
 		comm "There are $num 'good' bins found in $bin_set! (>${comp}% completion and <${cont}% contamination)"
@@ -396,16 +397,16 @@ announcement "FINALIZING THE REFINED BINS"
 
 if [ "$run_checkm" == "true" ] && [ $dereplicate != "false" ]; then
 	comm "Re-running CheckM on binsO bins"
-	mkdir binsO.tmp
+	tmp_dir2=$(mktemp -d "${TMPDIR:-/tmp}/checkm2_binsO_XXXXXX")
 
 	if [ "$quick" == "true" ]; then
-		conda run -n checkm2-env checkm2 predict -x fa -i binsO -o binsO.checkm -t $threads --tmpdir binsO.tmp --lowmem
+		mamba run -n checkm2-env checkm2 predict -x fa -i binsO -o binsO.checkm -t $threads --tmpdir $tmp_dir2 --lowmem
 	else
-		conda run -n checkm2-env checkm2 predict -x fa -i binsO -o binsO.checkm -t $threads --tmpdir binsO.tmp
+		mamba run -n checkm2-env checkm2 predict -x fa -i binsO -o binsO.checkm -t $threads --tmpdir $tmp_dir2
 	fi
 
 	if [[ ! -s binsO.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
-	rm -r binsO.tmp
+	for _try in {1..5}; do rm -rf "$tmp_dir2" && break; sleep 2; done || true
 	${SOFT}/summarize_checkm.py binsO.checkm/quality_report.tsv manual binsM.stats | (read -r; printf "%s\n" "$REPLY"; sort -rn -k2) > binsO.stats
 	if [[ $? -ne 0 ]]; then error "Cannot make checkm summary file. Exiting."; fi
 	rm -r binsO.checkm

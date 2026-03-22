@@ -335,7 +335,7 @@ if [ "$run_checkm" = true ]; then
 	comm "Running CheckM on best bins (reassembled and original)"
 	if [[ -d ${out}/reassembled_bins.checkm ]]; then rm -r ${out}/reassembled_bins.checkm; fi
 	mkdir ${out}/tmp
-	conda run -n checkm2-env chechm2 predict -x fa -i ${out}/reassembled_bins -o ${out}/reassembled_bins.checkm -t $threads --tmpdir ${out}/tmp
+	conda run -n checkm2-env checkm2 predict -x fa -i ${out}/reassembled_bins -o ${out}/reassembled_bins.checkm -t $threads --tmpdir ${out}/tmp
 	if [[ ! -s ${out}/reassembled_bins.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM2. Exiting..."; fi
 	${SOFT}/summarize_checkm.py ${out}/reassembled_bins.checkm/quality_report.tsv | (read -r; printf "%s\n" "$REPLY"; sort) > ${out}/reassembled_bins.stats
 	if [[ $? -ne 0 ]]; then error "Cannot make checkm2 summary file. Exiting."; fi

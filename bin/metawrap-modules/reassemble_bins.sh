@@ -313,9 +313,9 @@ fi
 
 if [ "$run_checkm" = true ]; then
 	########################################################################################################
-	########################             RUN CHECKM ON REASSEMBLED BINS             ########################
+	########################             RUN CHECKM2 ON REASSEMBLED BINS             ########################
 	########################################################################################################
-	announcement "RUN CHECKM ON REASSEMBLED BINS"
+	announcement "RUN CHECKM2 ON REASSEMBLED BINS"
 
 	# determine --pplacer_threads count. It is either the max thread count or RAM/4, whichever is higher
 	ram_max=$(($mem / 40))
@@ -324,22 +324,21 @@ if [ "$run_checkm" = true ]; then
 	else
 		p_threads=$threads
 	fi
-	comm "There is $mem RAM and $threads threads available, and each pplacer thread uses ~40GB, so I will use $p_threads threads for pplacer"
-
+	
 	# copy over original bins
 	for base in $( ls ${out}/original_bins/ | grep "\.fa$" ); do 
 		i=${out}/original_bins/$base
 		cp $i ${out}/reassembled_bins/${base%.*}.orig.fa
 	done
 
-	comm "Running CheckM on best bins (reassembled and original)"
+	comm "Running CheckM2 on best bins (reassembled and original)"
 	if [[ -d ${out}/reassembled_bins.checkm ]]; then rm -r ${out}/reassembled_bins.checkm; fi
-	mkdir ${out}/tmp
-	conda run -n checkm2-env checkm2 predict -x fa -i ${out}/reassembled_bins -o ${out}/reassembled_bins.checkm -t $threads --tmpdir ${out}/tmp
+	tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/reassembled_bins.tmp_XXXXXX")
+	mamba run -n checkm2-env checkm2 predict -x fa -i ${out}/reassembled_bins -o ${out}/reassembled_bins.checkm -t $threads --tmpdir $tmp_dir
 	if [[ ! -s ${out}/reassembled_bins.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM2. Exiting..."; fi
 	${SOFT}/summarize_checkm.py ${out}/reassembled_bins.checkm/quality_report.tsv | (read -r; printf "%s\n" "$REPLY"; sort) > ${out}/reassembled_bins.stats
 	if [[ $? -ne 0 ]]; then error "Cannot make checkm2 summary file. Exiting."; fi
-	rm -r ${out}/tmp
+	for _try in {1..5}; do rm -rf "$tmp_dir" && break; sleep 2; done || true
 
 
 	########################################################################################################
@@ -376,15 +375,15 @@ if [ "$run_checkm" = true ]; then
 	fi
 
 
-	comm "Re-running CheckM on the best reasembled bins."
+	comm "Re-running CheckM2 on the best reasembled bins."
 	if [[ -d ${out}/reassembled_bins.checkm ]]; then rm -r ${out}/reassembled_bins.checkm; fi
-	mkdir ${out}/tmp
-        conda run -n checkm2-env checkm2 predict -x fa -i ${out}/reassembled_bins -o ${out}/reassembled_bins.checkm -t $threads --tmpdir ${out}/tmp
-        if [[ ! -s ${out}/reassembled_bins.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM. Exiting..."; fi
-	rm -r ${out}/tmp
-        comm "Finalizing CheckM stats..."
+	tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/reassembled_bins.tmp_XXXXXX")
+        mamba run -n checkm2-env checkm2 predict -x fa -i ${out}/reassembled_bins -o ${out}/reassembled_bins.checkm -t $threads --tmpdir $tmp_dir
+        if [[ ! -s ${out}/reassembled_bins.checkm/quality_report.tsv ]]; then error "Something went wrong with running CheckM2. Exiting..."; fi
+	for _try in {1..5}; do rm -rf "$tmp_dir" && break; sleep 2; done || true
+        comm "Finalizing CheckM2 stats..."
         ${SOFT}/summarize_checkm.py ${out}/reassembled_bins.checkm/quality_report.tsv | (read -r; printf "%s\n" "$REPLY"; sort) > ${out}/reassembled_bins.stats
-        if [[ $? -ne 0 ]]; then error "Cannot make checkm summary file. Exiting."; fi
+        if [[ $? -ne 0 ]]; then error "Cannot make checkm2 summary file. Exiting."; fi
 
         # comm "Making CheckM plot of ${out}/reassembled_bins bins"
         # checkm bin_qa_plot -x fa ${out}/reassembled_bins.checkm ${out}/reassembled_bins ${out}/reassembled_bins.plot

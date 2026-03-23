@@ -288,16 +288,16 @@ done
 
 
 ########################################################################################################
-########################              RUN CHECKM ON ALL BIN SETS                ########################
+########################              RUN CHECKM2 ON ALL BIN SETS                ########################
 ########################################################################################################
 if [ "$run_checkm" == "true" ] && [[ ! -s work_files/binsM.stats ]]; then
-	announcement "RUNNING CHECKM ON ALL SETS OF BINS"
+	announcement "RUNNING CHECKM2 ON ALL SETS OF BINS"
 	for bin_set in $(ls | grep -v tmp | grep -v stats | grep bins); do 
-		comm "Running CheckM on $bin_set bins"
+		comm "Running CheckM2 on $bin_set bins"
 		if [[ -d ${bin_set}.checkm ]]; then rm -r ${bin_set}.checkm; fi
 		tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/checkm2_${bin_set}_XXXXXX")
 		if [ "$quick" == "true" ]; then
-			comm "Note: running with --reduced_tree option"
+			comm "Note: running with --lowmem option"
 			mamba run -n checkm2-env checkm2 predict -x fa -i $bin_set -o ${bin_set}.checkm -t $threads --tmpdir $tmp_dir --lowmem
 		else
 			mamba run -n checkm2-env checkm2 predict -x fa -i $bin_set -o ${bin_set}.checkm -t $threads --tmpdir $tmp_dir
@@ -396,7 +396,7 @@ announcement "FINALIZING THE REFINED BINS"
 
 
 if [ "$run_checkm" == "true" ] && [ $dereplicate != "false" ]; then
-	comm "Re-running CheckM on binsO bins"
+	comm "Re-running CheckM2 on binsO bins"
 	tmp_dir2=$(mktemp -d "${TMPDIR:-/tmp}/checkm2_binsO_XXXXXX")
 
 	if [ "$quick" == "true" ]; then

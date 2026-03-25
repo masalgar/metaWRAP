@@ -4,7 +4,9 @@ This is a fork of metaWRAP that uses CheckM2 to assess bin quality.
 
 MetaWRAP's bin refinement module is one of the best out there, but one of the pet peeves I have with it is that it uses CheckM, rather than CheckM2, to assess bin quality. CheckM2 is a more modern sucessor of CheckM1, and is supposed to be more accurate and lightweight.
 
-So, I decided to fork metaWRAP and try to port it to CheckM2. I've ported both the bin_refinement and reassemble_bins modules to CheckM2. I have not tested it extensively, but it works with my data.
+So, I decided to fork metaWRAP and try to port it to CheckM2. I've ported both the bin_refinement and reassemble_bins modules to CheckM2. 
+
+DISCLAIMER: I have not tested this port extensively. It works with my data, but use it at your own risk.
 
 ### The problem
 

@@ -1,3 +1,28 @@
+# IMPORTANT NOTE ON CHECKM2 FUNCTIONALITY
+
+This is a fork of metaWRAP that uses CheckM2 to assess bin quality.
+
+MetaWRAP's bin refinement module is one of the best out there, but one of the pet peeves I have with it is that it uses CheckM, rather than CheckM2, to assess bin quality. CheckM2 is a more modern sucessor of CheckM1, and is supposed to be more accurate and lightweight.
+
+So, I decided to fork metaWRAP and try to port it to CheckM2. I've ported both the bin_refinement and reassemble_bins modules to CheckM2. I have not tested it extensively, but it works with my data.
+
+### The problem
+
+MetaWRAP is written in Python 2.7, whereas CheckM2 requires Python 3+. It is not possible to install them in the same conda environment.
+
+### The solution
+
+Instead of running CheckM2 inside metaWRAP's conda environment, we can run it in its own environment with "conda (or mamba) run -n [env-name] [command]". This, and a rewritten summarize_checkm script that reads the output from CheckM2, rather than CheckM1, means that metaWRAP now uses CheckM2 to assess bin completiion and contamination. Everything else should work exactly the same.
+
+### What you need to make it work
+
+To make this port work, you NEED to install **mamba** and you NEED to install CheckM2 in a conda environment that is called EXACTLY "**checkm2-env**". You have to download CheckM2's database and set the environmental variable CHECKM2DB as described in CheckM2's [installation instructions](https://github.com/chklovski/CheckM2).
+
+Other than that, just git clone this repo and build the metawrap conda environment following the original's instructions.
+
+
+
+
 # MetaWRAP - a flexible pipeline for genome-resolved metagenomic data analysis
 
  MetaWRAP aims to be an **easy-to-use metagenomic wrapper suite** that accomplishes the core tasks of metagenomic analysis from start to finish: read quality control, assembly, visualization, taxonomic profiling, extracting draft genomes (binning), and functional annotation. Additionally, metaWRAP takes bin extraction and analysis to the next level (see module overview below). While there is no single best approach for processing metagenomic data, metaWRAP is meant to be a fast and simple approach before you delve deeper into parameterization of your analysis. MetaWRAP can be applied to a variety of environments, including gut, water, and soil microbiomes (see metaWRAP paper for benchmarks). Each individual module of metaWRAP is a standalone program, which means you can use only the modules you are interested in for your data.
